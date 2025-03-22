@@ -76,42 +76,6 @@ router.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
 });
 
-router.get("/vouchers", async (req, res) => {
-    try {
-        // Log bahwa endpoint dipanggil
-        console.log('[INFO] GET /vouchers dipanggil');
-        
-        // Cek apakah koneksi ke Supabase tersedia
-        if (!supabaseUrl || !supabaseKey) {
-            console.error('[ERROR] Supabase credentials tidak tersedia');
-            return res.status(500).json({ 
-                error: 'Kesalahan konfigurasi server', 
-                details: 'Supabase credentials tidak tersedia'
-            });
-        }
-        
-        const { data, error } = await supabase
-            .from('lgx_voucher')
-            .select('*');
-        
-        if (error) {
-            console.error('[ERROR] Error fetching vouchers:', error);
-            throw error;
-        }
-        
-        console.log('[INFO] Berhasil mendapatkan data, jumlah:', data ? data.length : 0);
-        res.status(200).json(data || []);
-    } catch (error) {
-        console.error('[ERROR] Error fetching vouchers:', error);
-        // Tampilkan semua informasi error
-        res.status(500).json({ 
-            error: 'Error saat mengambil data voucher', 
-            message: error.message,
-            details: error.details || error.toString()
-        });
-    }
-});
-
 // Endpoint untuk menambahkan voucher baru
 router.post("/vouchers", authenticateApiRequest, async (req, res) => {
     try {
@@ -346,6 +310,13 @@ api.use((err, req, res, next) => {
         timestamp: new Date().toISOString()
     });
 });
+
+// Logging jalur API yang terdaftar 
+console.log('[INFO] Jalur API terdaftar:');
+console.log('- GET /api/ - Halaman utama/info API');
+// Hapus log untuk endpoint GET /api/vouchers
+// console.log('- GET /api/vouchers - Dapatkan semua voucher');
+console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
 
 // Konfigurasi serverless
 const serverlessConfig = {

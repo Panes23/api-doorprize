@@ -175,6 +175,29 @@
             <div class="dot"></div>
             <div class="dot"></div>
         </div>
+        
+        <div class="endpoints">
+            <div class="endpoint-item">
+                <span class="endpoint-method">GET</span>
+                <span class="endpoint-path">/api/</span>
+                <div>API info dan health check</div>
+            </div>
+            <div class="endpoint-item">
+                <span class="endpoint-method">POST</span>
+                <span class="endpoint-path">/api/vouchers</span>
+                <div>Buat voucher baru (memerlukan autentikasi x-api-key)</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            &copy; 2024 World Time Center - API System
+        </div>
     </div>
+    
+    <script>
+        setTimeout(() => {
+            document.querySelector('.loader').style.display = 'none';
+        }, 3000);
+    </script>
 </body>
 </html>
