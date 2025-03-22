@@ -110,7 +110,7 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
 
         // Jika sudah ada voucher aktif, kembalikan pesan error
         if (matchingVouchers.length > 0) {
-            return res.status(400).json({ 
+            return res.status(401).json({ 
                 error: `Anda masih memilki undian Aktif kode ${matchingVouchers[0].lgx_voucher}` 
             });
         }
@@ -129,7 +129,7 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
         }
 
         if (existingVouchers && existingVouchers.length > 0) {
-            return res.status(400).json({ 
+            return res.status(401).json({ 
                 error: `Anda masih memilki undian Aktif kode ${existingVouchers[0].lgx_voucher}` 
             });
         }
@@ -147,8 +147,8 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
 
         // Validasi nominal
         if (nominal < configData.minimal_nominal) {
-            return res.status(400).json({ 
-                error: `Nominal tidak boleh kurang dari dari Rp.${configData.minimal_nominal} Untuk mendapatkan voucher Doorprize.` 
+            return res.status(402).json({ 
+                error: `Lakukan pemasangan setelah diskon lebih dari Rp.${configData.minimal_nominal} Untuk mendapatkan voucher Doorprize.` 
             });
         }
 
