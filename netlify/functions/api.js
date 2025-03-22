@@ -76,35 +76,6 @@ router.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
 });
 
-// Tambahkan endpoint health check untuk debugging
-router.get("/health", (req, res) => {
-    // Informasi dasar tentang API
-    const health = {
-        status: 'UP',
-        timestamp: new Date().toISOString(),
-        apiInfo: {
-            version: '1.0.0',
-            environment: process.env.NODE_ENV || 'production',
-            platform: 'Netlify Functions'
-        },
-        env: {
-            nodeEnv: process.env.NODE_ENV || 'not set',
-            hasSupabaseUrl: !!process.env.PUBLIC_SUPABASE_URL,
-            hasSupabaseKey: !!process.env.PUBLIC_SUPABASE_ANON_KEY,
-            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            hasApiKey: !!process.env.API_SECRET_KEY,
-            supbaseUrlFirstChars: process.env.PUBLIC_SUPABASE_URL ? process.env.PUBLIC_SUPABASE_URL.substring(0, 10) + '...' : 'not set'
-        },
-        netlifyInfo: {
-            buildId: process.env.BUILD_ID || 'not set',
-            deployId: process.env.DEPLOY_ID || 'not set',
-            context: process.env.CONTEXT || 'not set',
-            netlifyDev: process.env.NETLIFY_DEV || 'not set'
-        }
-    };
-    res.status(200).json(health);
-});
-
 router.get("/vouchers", async (req, res) => {
     try {
         // Log bahwa endpoint dipanggil
@@ -376,23 +347,9 @@ api.use((err, req, res, next) => {
     });
 });
 
-// Logging jalur API yang terdaftar 
-console.log('[INFO] Jalur API terdaftar:');
-console.log('- GET /api/ - Halaman utama/info API');
-console.log('- GET /api/health - Health check');
-console.log('- GET /api/vouchers - Dapatkan semua voucher');
-console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
-
 // Konfigurasi serverless
 const serverlessConfig = {
     handler: api
 };
-
-// Log API startup
-console.log('===================================================');
-console.log(`[INFO] API Doorprize dimulai dengan konfigurasi:`);
-console.log(`[INFO] - Autentikasi API: ${API_SECRET_KEY ? 'AKTIF' : 'NONAKTIF'}`);
-console.log(`[INFO] - Service Role Key: ${supabaseServiceKey ? 'TERSEDIA' : 'TIDAK TERSEDIA'}`);
-console.log('===================================================');
 
 export const handler = serverless(api, serverlessConfig);
