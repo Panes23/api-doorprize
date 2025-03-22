@@ -156,7 +156,7 @@ app.post("/api/vouchers", authenticateApiRequest, async (req, res) => {
         // Validasi nominal
         if (nominal < configData.minimal_nominal) {
             return res.status(400).json({ 
-                error: `Nominal tidak boleh kurang dari ${configData.minimal_nominal}` 
+                error: `Nominal tidak boleh kurang dari Rp.${configData.minimal_nominal} Untuk mendapatkan voucher Doorprize.` 
             });
         }
 
