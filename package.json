@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "netlify dev"
+    "dev": "netlify dev",
+    "dev:local": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
@@ -19,5 +20,8 @@
     "pg": "^8.14.1",
     "serverless-http": "^3.2.0",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }
