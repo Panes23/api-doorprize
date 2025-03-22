@@ -1,3 +1,4 @@
 # Local Netlify folder
 /node_modules
 .netlify
+test_concurrent_inserts.js

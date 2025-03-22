@@ -1,8 +1,7 @@
-import express , {Router} from "express";
-import serverless from "serverless-http";
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
+const express = require("express");
+const dotenv = require("dotenv");
+const { createClient } = require('@supabase/supabase-js');
+const { v4: uuidv4 } = require('uuid');
 
 dotenv.config();
 
@@ -29,13 +28,14 @@ const supabase = createClient(supabaseUrl, supabaseKey, supabaseOptions);
 // Client dengan service role key untuk operasi insert (bypasses RLS)
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, supabaseOptions);
 
-const api = express();
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Meningkatkan batas JSON payload
-api.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Middleware untuk meningkatkan timeout request
-api.use((req, res, next) => {
+app.use((req, res, next) => {
     req.setTimeout(120000); // 2 menit timeout per request
     res.setTimeout(120000);
     next();
@@ -65,13 +65,11 @@ const authenticateApiRequest = (req, res, next) => {
     next();
 };
 
-const router = Router();
-
-router.get("/", (req, res) => {
-    res.sendFile(__dirname + "/index.html");
+app.get("/", (req, res) => {
+    res.send("API Doorprize berjalan dengan baik!");
 });
 
-router.get("/vouchers", async (req, res) => {
+app.get("/api/vouchers", async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('lgx_voucher')
@@ -87,7 +85,7 @@ router.get("/vouchers", async (req, res) => {
 });
 
 // Endpoint untuk menambahkan voucher baru
-router.post("/vouchers", authenticateApiRequest, async (req, res) => {
+app.post("/api/vouchers", authenticateApiRequest, async (req, res) => {
     try {
         // Ambil data dari body request
         const { username, websites_id, nominal } = req.body;
@@ -301,39 +299,41 @@ async function generateVoucherCodeFallback() {
     return voucherCode;
 }
 
-api.use("/api/", router);
+// Meningkatkan batas koneksi HTTP
+require('http').globalAgent.maxSockets = 1000;
+// Meningkatkan batas listener event
+require('events').EventEmitter.defaultMaxListeners = 100;
 
-// Tambahkan catch-all error handler (HARUS ditempatkan setelah semua rute dan router)
-api.use((err, req, res, next) => {
-    console.error('[ERROR] Uncaught exception:', err);
-    res.status(500).json({ 
-        error: 'Terjadi kesalahan pada server',
-        detail: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+// Penanganan kesalahan tak terduga
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
 });
 
-// Logging jalur API yang terdaftar 
-console.log('[INFO] Jalur API terdaftar:');
-console.log('- GET /api/ - Halaman utama');
-console.log('- GET /api/vouchers - Dapatkan semua voucher');
-console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+}); 
 
-// Meningkatkan batas HTTP
-require('http').globalAgent.maxSockets = 1500;
+// Memulai server dengan penanganan error
+const server = app.listen(PORT, () => {
+    console.log(`Server berjalan di port ${PORT}`);
+    
+    // Log API startup
+    console.log('===================================================');
+    console.log(`[INFO] API Doorprize dimulai dengan konfigurasi:`);
+    console.log(`[INFO] - Autentikasi API: ${API_SECRET_KEY ? 'AKTIF' : 'NONAKTIF'}`);
+    console.log(`[INFO] - Service Role Key: ${supabaseServiceKey ? (supabaseServiceKey.substring(0, 10) + '...') : 'TIDAK TERSEDIA'}`);
+    console.log(`[INFO] - Max Socket: 1000`);
+    console.log(`[INFO] - Timeout: 120 detik`);
+    console.log('===================================================');
+    console.log('[INFO] Jalur API terdaftar:');
+    console.log('- GET / - Halaman utama');
+    console.log('- GET /api/vouchers - Dapatkan semua voucher');
+    console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
+});
 
-// Konfigurasi serverless
-const serverlessConfig = {
-    handler: api,
-    maxDuration: 300 // Ditingkatkan dari 120 detik menjadi 300 detik maximum execution time
-};
-
-// Log API startup
-console.log('===================================================');
-console.log(`[INFO] API Doorprize dimulai dengan konfigurasi:`);
-console.log(`[INFO] - Autentikasi API: ${API_SECRET_KEY ? 'AKTIF' : 'NONAKTIF'}`);
-console.log(`[INFO] - Service Role Key: ${supabaseServiceKey ? (supabaseServiceKey.substring(0, 10) + '...') : 'TIDAK TERSEDIA'}`);
-console.log(`[INFO] - Max Socket: 1500`);
-console.log(`[INFO] - Max Duration: 300 detik`);
-console.log('===================================================');
-
-export const handler = serverless(api, serverlessConfig);
+server.on('error', (error) => {
+    console.error('[ERROR] Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+        console.error(`[ERROR] Port ${PORT} sudah digunakan. Pastikan tidak ada server lain yang berjalan di port tersebut.`);
+    }
+}); 
