@@ -148,7 +148,7 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
         // Validasi nominal
         if (nominal < configData.minimal_nominal) {
             return res.status(402).json({ 
-                error: `Lakukan 1 invoice pemasangan setelah diskon lebih dari Rp.${configData.minimal_nominal} Untuk mendapatkan voucher Doorprize.` 
+                error: `Maaf, total pemasangan anda sebesar Rp.${nominal} belum cukup untuk mendapatkan voucher Doorprize. Silahkan Lakukan 1 invoice pemasangan setelah diskon lebih dari Rp.${configData.minimal_nominal} Untuk mendapatkan voucher Doorprize.` 
             });
         }
 

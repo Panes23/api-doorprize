@@ -4,3 +4,4 @@
 test_concurrent_inserts.js
 .env
 /supabase/
+index.js
