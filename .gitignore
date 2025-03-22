@@ -2,3 +2,5 @@
 /node_modules
 .netlify
 test_concurrent_inserts.js
+.env
+/supabase/
