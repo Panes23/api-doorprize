@@ -68,21 +68,60 @@ const authenticateApiRequest = (req, res, next) => {
 const router = Router();
 
 router.get("/", (req, res) => {
-    res.sendFile(__dirname + "/index.html");
+    // res.sendFile(__dirname + "/index.html");
+    res.send('API Doorprize - Netlify Function');
+});
+
+// Tambahkan endpoint health check untuk debugging
+router.get("/health", (req, res) => {
+    // Informasi dasar tentang API
+    const health = {
+        status: 'UP',
+        timestamp: new Date().toISOString(),
+        env: {
+            nodeEnv: process.env.NODE_ENV || 'not set',
+            hasSupabaseUrl: !!process.env.PUBLIC_SUPABASE_URL,
+            hasSupabaseKey: !!process.env.PUBLIC_SUPABASE_ANON_KEY,
+            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            hasApiKey: !!process.env.API_SECRET_KEY
+        }
+    };
+    res.status(200).json(health);
 });
 
 router.get("/vouchers", async (req, res) => {
     try {
+        // Log bahwa endpoint dipanggil
+        console.log('[INFO] GET /vouchers dipanggil');
+        
+        // Cek apakah koneksi ke Supabase tersedia
+        if (!supabaseUrl || !supabaseKey) {
+            console.error('[ERROR] Supabase credentials tidak tersedia');
+            return res.status(500).json({ 
+                error: 'Kesalahan konfigurasi server', 
+                details: 'Supabase credentials tidak tersedia'
+            });
+        }
+        
         const { data, error } = await supabase
             .from('lgx_voucher')
             .select('*');
         
-        if (error) throw error;
+        if (error) {
+            console.error('[ERROR] Error fetching vouchers:', error);
+            throw error;
+        }
         
-        res.status(200).json(data);
+        console.log('[INFO] Berhasil mendapatkan data, jumlah:', data ? data.length : 0);
+        res.status(200).json(data || []);
     } catch (error) {
         console.error('[ERROR] Error fetching vouchers:', error);
-        res.status(500).json({ error: error.message });
+        // Tampilkan semua informasi error
+        res.status(500).json({ 
+            error: 'Error saat mengambil data voucher', 
+            message: error.message,
+            details: error.details || error.toString()
+        });
     }
 });
 
@@ -306,9 +345,17 @@ api.use("/api/", router);
 // Tambahkan catch-all error handler (HARUS ditempatkan setelah semua rute dan router)
 api.use((err, req, res, next) => {
     console.error('[ERROR] Uncaught exception:', err);
+    // Log stack trace lengkap ke konsol
+    if (err.stack) {
+        console.error('[ERROR] Stack trace:', err.stack);
+    }
+    
     res.status(500).json({ 
         error: 'Terjadi kesalahan pada server',
-        detail: process.env.NODE_ENV === 'development' ? err.message : undefined
+        // Selalu tampilkan pesan error bahkan di production untuk memudahkan debugging
+        message: err.message,
+        // Tambahkan stack untuk debugging lebih lanjut jika diperlukan
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
 
