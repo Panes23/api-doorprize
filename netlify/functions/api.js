@@ -72,35 +72,8 @@ const authenticateApiRequest = (req, res, next) => {
 const router = Router();
 
 router.get("/", (req, res) => {
-    // Tampilkan respons berupa JSON dengan informasi dasar API sebagai ganti dari respons teks biasa
-    res.json({
-        name: 'API Doorprize',
-        version: '1.0',
-        status: 'running',
-        environment: process.env.NODE_ENV || 'production',
-        endpoints: [
-            {
-                path: '/api/',
-                method: 'GET',
-                description: 'API info dan health check'
-            },
-            {
-                path: '/api/health',
-                method: 'GET',
-                description: 'Detailed health check dan environment info'
-            },
-            {
-                path: '/api/vouchers',
-                method: 'GET',
-                description: 'Ambil semua voucher'
-            },
-            {
-                path: '/api/vouchers',
-                method: 'POST',
-                description: 'Buat voucher baru (memerlukan autentikasi x-api-key)'
-            }
-        ]
-    });
+    // Mengirimkan file index.html
+    res.sendFile(__dirname + "/index.html");
 });
 
 // Tambahkan endpoint health check untuk debugging

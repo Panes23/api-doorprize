@@ -1,7 +1,15 @@
 [build]
   functions = "netlify/functions"
+  publish = "."
+
 [[redirects]]
   force = true
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# Redirect untuk halaman root, akan menampilkan index.html di root folder
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
