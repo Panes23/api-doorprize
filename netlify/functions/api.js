@@ -194,10 +194,47 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
             throw error;
         }
 
-        // Tambahkan pesan sukses ke respons
+        // Mengambil data pasaran live dari tabel lgx_pasaran_live
+        let pasaranLiveData = [];
+        let pasaranLiveError = null;
+        
+        try {
+            const response = await supabaseAdmin
+                .from('lgx_pasaran_live')
+                .select('name, time_live, live_url');
+            
+            pasaranLiveData = response.data || [];
+            pasaranLiveError = response.error;
+        } catch (e) {
+            console.error('[ERROR] Error checking pasaran live table:', e);
+            // Jika tabel belum ada, kita gunakan data default
+        }
+
+        // Menyiapkan daftar live event yang tersedia
+        let liveEvents = '';
+        let liveButtons = '';
+
+        if (pasaranLiveData && pasaranLiveData.length > 0) {
+            // Membuat daftar jadwal live event
+            liveEvents = pasaranLiveData.map(live => 
+                `${live.name} (${live.time_live} WIB)`
+            ).join(', ');
+
+            // Membuat daftar tombol untuk menonton live
+            liveButtons = pasaranLiveData.map(live => 
+                `<a href="${live.live_url}" target="_blank" style="display:inline-block;background-color:#3b82f6;color:white;padding:8px 16px;margin:5px;text-decoration:none;border-radius:4px;">Tonton Live ${live.name}</a>`
+            ).join('');
+        } else {
+            liveEvents = "Lotto Genting 22";
+            liveButtons = "";
+        }
+
+        // Tambahkan pesan sukses ke respons dengan informasi live event
         res.status(201).json({
             ...data[0],
-            message: `Selamat! Anda Mendaptkan 1 Voucher Undian Lotto Genting dengan nomor : ${data[0].lgx_voucher} yang akan di undi pada live Lotto Genting 22`
+            message: `Selamat! Anda Mendapatkan 1 Voucher Undian DOORPRIZE dengan nomor : ${data[0].lgx_voucher} yang akan di undi pada live ${liveEvents}.`,
+            live_events: pasaranLiveData || [],
+            live_buttons_html: liveButtons
         });
     } catch (error) {
         console.error('[ERROR] Error in voucher creation:', error);
