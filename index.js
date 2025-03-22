@@ -202,7 +202,11 @@ app.post("/api/vouchers", authenticateApiRequest, async (req, res) => {
             throw error;
         }
 
-        res.status(201).json(data[0]);
+        // Tambahkan pesan sukses ke respons
+        res.status(201).json({
+            ...data[0],
+            message: `Selamat! Anda Mendaptkan 1 Voucher Undian Lotto Genting dengan nomor : ${data[0].lgx_voucher} yang akan di undi pada live Lotto Genting 22`
+        });
     } catch (error) {
         console.error('[ERROR] Error in voucher creation:', error);
         res.status(500).json({ error: error.message });
