@@ -34,10 +34,14 @@ const api = express();
 // Meningkatkan batas JSON payload
 api.use(express.json({ limit: '10mb' }));
 
-// Middleware untuk meningkatkan timeout request
+// Tambahkan CORS middleware
 api.use((req, res, next) => {
-    req.setTimeout(120000); // 2 menit timeout per request
-    res.setTimeout(120000);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
     next();
 });
 
@@ -68,8 +72,35 @@ const authenticateApiRequest = (req, res, next) => {
 const router = Router();
 
 router.get("/", (req, res) => {
-    // res.sendFile(__dirname + "/index.html");
-    res.send('API Doorprize - Netlify Function');
+    // Tampilkan respons berupa JSON dengan informasi dasar API sebagai ganti dari respons teks biasa
+    res.json({
+        name: 'API Doorprize',
+        version: '1.0',
+        status: 'running',
+        environment: process.env.NODE_ENV || 'production',
+        endpoints: [
+            {
+                path: '/api/',
+                method: 'GET',
+                description: 'API info dan health check'
+            },
+            {
+                path: '/api/health',
+                method: 'GET',
+                description: 'Detailed health check dan environment info'
+            },
+            {
+                path: '/api/vouchers',
+                method: 'GET',
+                description: 'Ambil semua voucher'
+            },
+            {
+                path: '/api/vouchers',
+                method: 'POST',
+                description: 'Buat voucher baru (memerlukan autentikasi x-api-key)'
+            }
+        ]
+    });
 });
 
 // Tambahkan endpoint health check untuk debugging
@@ -78,12 +109,24 @@ router.get("/health", (req, res) => {
     const health = {
         status: 'UP',
         timestamp: new Date().toISOString(),
+        apiInfo: {
+            version: '1.0.0',
+            environment: process.env.NODE_ENV || 'production',
+            platform: 'Netlify Functions'
+        },
         env: {
             nodeEnv: process.env.NODE_ENV || 'not set',
             hasSupabaseUrl: !!process.env.PUBLIC_SUPABASE_URL,
             hasSupabaseKey: !!process.env.PUBLIC_SUPABASE_ANON_KEY,
             hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            hasApiKey: !!process.env.API_SECRET_KEY
+            hasApiKey: !!process.env.API_SECRET_KEY,
+            supbaseUrlFirstChars: process.env.PUBLIC_SUPABASE_URL ? process.env.PUBLIC_SUPABASE_URL.substring(0, 10) + '...' : 'not set'
+        },
+        netlifyInfo: {
+            buildId: process.env.BUILD_ID || 'not set',
+            deployId: process.env.DEPLOY_ID || 'not set',
+            context: process.env.CONTEXT || 'not set',
+            netlifyDev: process.env.NETLIFY_DEV || 'not set'
         }
     };
     res.status(200).json(health);
@@ -344,43 +387,39 @@ api.use("/api/", router);
 
 // Tambahkan catch-all error handler (HARUS ditempatkan setelah semua rute dan router)
 api.use((err, req, res, next) => {
-    console.error('[ERROR] Uncaught exception:', err);
-    // Log stack trace lengkap ke konsol
+    // Log error ke console
+    console.error('[ERROR] Uncaught exception:', err.message || err);
+    
+    // Log stack trace jika tersedia
     if (err.stack) {
         console.error('[ERROR] Stack trace:', err.stack);
     }
     
+    // Sediakan response yang tidak terlalu detail untuk client
     res.status(500).json({ 
         error: 'Terjadi kesalahan pada server',
-        // Selalu tampilkan pesan error bahkan di production untuk memudahkan debugging
-        message: err.message,
-        // Tambahkan stack untuk debugging lebih lanjut jika diperlukan
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        message: err.message || 'Unknown error',
+        timestamp: new Date().toISOString()
     });
 });
 
 // Logging jalur API yang terdaftar 
 console.log('[INFO] Jalur API terdaftar:');
-console.log('- GET /api/ - Halaman utama');
+console.log('- GET /api/ - Halaman utama/info API');
+console.log('- GET /api/health - Health check');
 console.log('- GET /api/vouchers - Dapatkan semua voucher');
 console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
 
-// Meningkatkan batas HTTP
-require('http').globalAgent.maxSockets = 1500;
-
 // Konfigurasi serverless
 const serverlessConfig = {
-    handler: api,
-    maxDuration: 300 // Ditingkatkan dari 120 detik menjadi 300 detik maximum execution time
+    handler: api
 };
 
 // Log API startup
 console.log('===================================================');
 console.log(`[INFO] API Doorprize dimulai dengan konfigurasi:`);
 console.log(`[INFO] - Autentikasi API: ${API_SECRET_KEY ? 'AKTIF' : 'NONAKTIF'}`);
-console.log(`[INFO] - Service Role Key: ${supabaseServiceKey ? (supabaseServiceKey.substring(0, 10) + '...') : 'TIDAK TERSEDIA'}`);
-console.log(`[INFO] - Max Socket: 1500`);
-console.log(`[INFO] - Max Duration: 300 detik`);
+console.log(`[INFO] - Service Role Key: ${supabaseServiceKey ? 'TERSEDIA' : 'TIDAK TERSEDIA'}`);
 console.log('===================================================');
 
 export const handler = serverless(api, serverlessConfig);
