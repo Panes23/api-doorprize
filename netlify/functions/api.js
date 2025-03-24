@@ -169,7 +169,7 @@ router.get("/live-url", async (req, res) => {
         // Mengambil data dari tabel lgx_pasaran_live menggunakan supabaseAdmin (bypass RLS)
         const { data, error } = await supabaseAdmin
             .from('lgx_pasaran_live')
-            .select('live_url')
+            .select('live_url, time_live, name')
             .order('created_at', { ascending: false })
             .limit(1);
             
@@ -186,14 +186,18 @@ router.get("/live-url", async (req, res) => {
             return res.status(200).json({
                 success: true,
                 live_url: null,
+                time_live: null,
+                name: null,
                 message: 'Tidak ada data URL live tersedia'
             });
         }
         
-        // Mengembalikan URL live pertama
+        // Mengembalikan data live pertama
         res.status(200).json({
             success: true,
-            live_url: data[0].live_url
+            live_url: data[0].live_url,
+            time_live: data[0].time_live,
+            name: data[0].name
         });
     } catch (error) {
         console.error('[ERROR] Error in fetching live URL:', error);
