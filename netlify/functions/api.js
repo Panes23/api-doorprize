@@ -76,6 +76,93 @@ router.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
 });
 
+// Endpoint untuk mengambil data voucher berdasarkan username dan xcode
+router.get("/source", async (req, res) => {
+    try {
+        // Mengambil parameter dari query
+        const { username, xcode } = req.query;
+        
+        // Validasi input
+        if (!username || !xcode) {
+            return res.status(400).json({ error: "Parameter username dan xcode harus disertakan" });
+        }
+        
+        // Standarisasi username dan website_id
+        const normalizedUsername = username.trim().toLowerCase();
+        const normalizedWebsiteId = xcode.trim();
+        
+        // Mengambil data dari database
+        const { data: voucherData, error: voucherError } = await supabase
+            .from('lgx_voucher')
+            .select('*')
+            .filter('username', 'ilike', normalizedUsername)
+            .filter('websites_id', 'eq', normalizedWebsiteId);
+            
+        if (voucherError) {
+            console.error('[ERROR] Error fetching voucher data:', voucherError);
+            throw voucherError;
+        }
+        
+        // Mendapatkan data websites yang terkait
+        const websitesIds = [...new Set(voucherData.map(v => v.websites_id))];
+        const { data: websitesData, error: websitesError } = await supabase
+            .from('lgx_websites')
+            .select('id, name')
+            .in('id', websitesIds);
+            
+        if (websitesError) {
+            console.error('[ERROR] Error fetching websites data:', websitesError);
+        }
+        
+        // Mendapatkan data undian yang terkait
+        const undianIds = [...new Set(voucherData.filter(v => v.undian_id).map(v => v.undian_id))];
+        const { data: undianData, error: undianError } = await supabase
+            .from('lgx_undian')
+            .select('id, periode_lomba')
+            .in('id', undianIds);
+            
+        if (undianError) {
+            console.error('[ERROR] Error fetching undian data:', undianError);
+        }
+        
+        // Membuat lookup untuk data websites dan undian
+        const websitesLookup = (websitesData || []).reduce((acc, web) => {
+            acc[web.id] = web.name;
+            return acc;
+        }, {});
+        
+        const undianLookup = (undianData || []).reduce((acc, undian) => {
+            acc[undian.id] = undian.periode_lomba;
+            return acc;
+        }, {});
+        
+        // Memformat data respons
+        const formattedData = voucherData.map(voucher => ({
+            lgx_voucher: voucher.lgx_voucher,
+            username: voucher.username,
+            created_at: voucher.created_at,
+            websites: websitesLookup[voucher.websites_id] || voucher.websites_id,
+            status: voucher.status,
+            nominal: voucher.nominal,
+            kode_undian: voucher.undian_id ? undianLookup[voucher.undian_id] || null : null,
+            hasil_undi: voucher.hasil_undi
+        }));
+        
+        // Mengembalikan hasil
+        res.status(200).json({
+            success: true,
+            count: formattedData.length,
+            data: formattedData
+        });
+    } catch (error) {
+        console.error('[ERROR] Error in fetching voucher data:', error);
+        res.status(500).json({ 
+            success: false,
+            error: error.message 
+        });
+    }
+});
+
 // Endpoint untuk menambahkan voucher baru
 router.post("/vouchers", authenticateApiRequest, async (req, res) => {
     try {
@@ -358,6 +445,7 @@ console.log('- GET /api/ - Halaman utama/info API');
 // Hapus log untuk endpoint GET /api/vouchers
 // console.log('- GET /api/vouchers - Dapatkan semua voucher');
 console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
+console.log('- GET /api/source - Dapatkan data voucher berdasarkan username dan xcode');
 
 // Konfigurasi serverless
 const serverlessConfig = {
