@@ -163,6 +163,47 @@ router.get("/source", async (req, res) => {
     }
 });
 
+// Endpoint untuk mendapatkan URL live terbaru
+router.get("/live-url", async (req, res) => {
+    try {
+        // Mengambil data dari tabel lgx_pasaran_live menggunakan supabaseAdmin (bypass RLS)
+        const { data, error } = await supabaseAdmin
+            .from('lgx_pasaran_live')
+            .select('live_url')
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+        if (error) {
+            console.error('[ERROR] Error fetching live URL:', error);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Terjadi kesalahan saat mengambil URL live'
+            });
+        }
+        
+        // Jika tidak ada data, berikan respons default
+        if (!data || data.length === 0) {
+            return res.status(200).json({
+                success: true,
+                live_url: null,
+                message: 'Tidak ada data URL live tersedia'
+            });
+        }
+        
+        // Mengembalikan URL live pertama
+        res.status(200).json({
+            success: true,
+            live_url: data[0].live_url
+        });
+    } catch (error) {
+        console.error('[ERROR] Error in fetching live URL:', error);
+        res.status(500).json({ 
+            success: false,
+            error: error.message || 'Terjadi kesalahan yang tidak diketahui'
+        });
+    }
+});
+
 // Endpoint untuk menambahkan voucher baru
 router.post("/vouchers", authenticateApiRequest, async (req, res) => {
     try {
@@ -446,6 +487,7 @@ console.log('- GET /api/ - Halaman utama/info API');
 // console.log('- GET /api/vouchers - Dapatkan semua voucher');
 console.log('- POST /api/vouchers [perlu autentikasi] - Buat voucher baru');
 console.log('- GET /api/source - Dapatkan data voucher berdasarkan username dan xcode');
+console.log('- GET /api/live-url - Dapatkan URL live terbaru');
 
 // Konfigurasi serverless
 const serverlessConfig = {
