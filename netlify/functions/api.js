@@ -177,7 +177,7 @@ router.get("/live-url", async (req, res) => {
             console.error('[ERROR] Error fetching live URL:', error);
             return res.status(500).json({ 
                 success: false,
-                error: 'Terjadi kesalahan saat mengambil URL live'
+                error: 'Terjadi kesalahan saat mengambil URL live.'
             });
         }
         
