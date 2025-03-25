@@ -203,7 +203,7 @@ router.get("/live-url", async (req, res) => {
         console.error('[ERROR] Error in fetching live URL:', error);
         res.status(500).json({ 
             success: false,
-            error: error.message || 'Terjadi kesalahan yang tidak diketahui'
+            error: error.message || 'Terjadi kesalahan yang tidak diketahui.'
         });
     }
 });
