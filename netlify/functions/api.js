@@ -3,6 +3,7 @@ import serverless from "serverless-http";
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import https from 'https';
 
 dotenv.config();
 
@@ -45,6 +46,87 @@ api.use((req, res, next) => {
     next();
 });
 
+// Fungsi untuk mendapatkan IP publik
+const getPublicIp = () => {
+    return new Promise((resolve, reject) => {
+        https.get('https://api.ipify.org?format=json', (resp) => {
+            let data = '';
+            resp.on('data', (chunk) => { data += chunk; });
+            resp.on('end', () => {
+                try {
+                    const jsonData = JSON.parse(data);
+                    resolve(jsonData.ip);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }).on('error', (err) => {
+            reject(err);
+        });
+    });
+};
+
+// Fungsi helper untuk mendapatkan IP asli klien
+const getClientIp = async (req) => {
+    try {
+        // Cek header x-forwarded-for
+        const forwardedFor = req.headers['x-forwarded-for'];
+        if (forwardedFor) {
+            const ip = forwardedFor.split(',')[0].trim();
+            if (ip !== '::1' && ip !== '::ffff:127.0.0.1') {
+                return ip;
+            }
+        }
+        
+        // Cek header x-real-ip
+        const realIp = req.headers['x-real-ip'];
+        if (realIp && realIp !== '::1' && realIp !== '::ffff:127.0.0.1') {
+            return realIp;
+        }
+        
+        // Cek header cf-connecting-ip (Cloudflare)
+        const cfConnectingIp = req.headers['cf-connecting-ip'];
+        if (cfConnectingIp && cfConnectingIp !== '::1' && cfConnectingIp !== '::ffff:127.0.0.1') {
+            return cfConnectingIp;
+        }
+
+        // Cek header true-client-ip
+        const trueClientIp = req.headers['true-client-ip'];
+        if (trueClientIp && trueClientIp !== '::1' && trueClientIp !== '::ffff:127.0.0.1') {
+            return trueClientIp;
+        }
+
+        // Cek header x-client-ip
+        const xClientIp = req.headers['x-client-ip'];
+        if (xClientIp && xClientIp !== '::1' && xClientIp !== '::ffff:127.0.0.1') {
+            return xClientIp;
+        }
+        
+        // Jika tidak ada header khusus atau semua header adalah localhost,
+        // coba dapatkan IP dari socket
+        const socketIp = req.socket.remoteAddress;
+        if (socketIp && socketIp !== '::1' && socketIp !== '::ffff:127.0.0.1') {
+            return socketIp;
+        }
+
+        // Jika semua header gagal, coba dapatkan IP publik
+        try {
+            const publicIp = await getPublicIp();
+            if (publicIp) {
+                return publicIp;
+            }
+        } catch (error) {
+            console.error('[ERROR] Gagal mendapatkan IP publik:', error);
+        }
+        
+        // Jika semua gagal, kembalikan IP default
+        return '0.0.0.0';
+    } catch (error) {
+        console.error('[ERROR] Error dalam getClientIp:', error);
+        return '0.0.0.0';
+    }
+};
+
 // Middleware untuk autentikasi API
 const authenticateApiRequest = (req, res, next) => {
     // Ambil token hanya dari header x-api-key
@@ -54,7 +136,7 @@ const authenticateApiRequest = (req, res, next) => {
         path: req.path,
         method: req.method,
         hasToken: !!token,
-        remoteIP: req.ip || req.socket.remoteAddress
+        remoteIP: getClientIp(req)
     });
 
     // Cek apakah token valid
@@ -302,18 +384,18 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
         // Buat objek data voucher baru - gunakan nilai yang dinormalisasi
         const voucherData = {
             lgx_voucher: voucherCode,
-            username: normalizedUsername, // Menggunakan username yang dinormalisasi
+            username: normalizedUsername,
             created_at: createdAt.toISOString(),
             updated_at: createdAt.toISOString(),
             id,
             expired_date: formattedExpiredDate,
-            websites_id: normalizedWebsitesId, // Menggunakan websites_id yang dinormalisasi
+            websites_id: normalizedWebsitesId,
             status: 'active',
             player_status: 'real',
             nominal,
             undian_id: null,
             hasil_undi: null,
-            alamat_ip: req.ip || req.socket.remoteAddress // Menggunakan socket.remoteAddress sebagai alternatif modern
+            alamat_ip: await getClientIp(req) // Menggunakan await karena getClientIp sekarang async
         };
 
         // Insert data ke tabel lgx_voucher menggunakan supabaseAdmin untuk melewati RLS
