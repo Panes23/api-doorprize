@@ -54,7 +54,7 @@ const authenticateApiRequest = (req, res, next) => {
         path: req.path,
         method: req.method,
         hasToken: !!token,
-        remoteIP: req.ip || req.connection.remoteAddress
+        remoteIP: req.ip || req.socket.remoteAddress
     });
 
     // Cek apakah token valid
@@ -312,7 +312,8 @@ router.post("/vouchers", authenticateApiRequest, async (req, res) => {
             player_status: 'real',
             nominal,
             undian_id: null,
-            hasil_undi: null
+            hasil_undi: null,
+            alamat_ip: req.ip || req.socket.remoteAddress // Menggunakan socket.remoteAddress sebagai alternatif modern
         };
 
         // Insert data ke tabel lgx_voucher menggunakan supabaseAdmin untuk melewati RLS
